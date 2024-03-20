@@ -1,33 +1,26 @@
 import mysql.connector
-from flask import Flask
+from flask import Flask, request, jsonify, render_template
+import hashlib
+
 app = Flask(__name__)
-import pdb
 
-# input_str here is the url to be shortened
-def decimal_to_base62(decimal):
-    characters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    base62 = ""
+def hash_url(url):
+    # Use a proper hashing algorithm like SHA-256
+    return hashlib.sha256(url.encode()).hexdigest()
 
-    while decimal > 0:
-        remainder = decimal % 62
-        base62 = characters[remainder] + base62
-        decimal //= 62
-
-    return base62 if base62 else "0"
-
-def insert_data(input_str, unique_integer):
+def insert_data(input_str, short_url):
     try:
         connection = mysql.connector.connect(
             host="127.0.0.1",
             user="root",
-            password="Bits@1612",
+            password="root1234",
             database="my_database"
         )
 
         cursor = connection.cursor()
 
-        sql = "INSERT INTO input_data (input_str, unique_integer) VALUES (%s, %s)"
-        val = (input_str, unique_integer)
+        sql = "INSERT INTO input_data (input_str, short_url) VALUES (%s, %s)"
+        val = (input_str, short_url)
         cursor.execute(sql, val)
 
         connection.commit()
@@ -42,52 +35,56 @@ def insert_data(input_str, unique_integer):
                 cursor.close()
                 connection.close()
                 print("MySQL connection is closed.")
-                
+
 def fetch_data(short_url):
-    connection = mysql.connector.connect(
-        host="127.0.0.1",
-        user="root",
-        password="Bits@1612",
-        database="my_database"
-    )
+    try:
+        connection = mysql.connector.connect(
+            host="127.0.0.1",
+            user="root",
+            password="root1234",
+            database="my_database"
+        )
 
-    cursor = connection.cursor()
+        cursor = connection.cursor()
 
-    sql = "select input_str from input_data where unique_integer=\"{}\"".format(short_url) 
-    cursor.execute(sql)
-    print(sql)
-      
-    print("Data fetched successfully.")
-    for row in cursor:
-        print(row) 
+        sql = "SELECT input_str FROM input_data WHERE short_url = %s"
+        cursor.execute(sql, (short_url,))
+        print(sql)
         
-    return row[0]
+        print("Data fetched successfully.")
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        else:
+            return "URL not found"
+    
+    except mysql.connector.Error as error:
+        print("Failed to fetch data from MySQL table:", error)
+        return "Error"
+
+    finally:
+        if 'connection' in locals():
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+                print("MySQL connection is closed.")
 
 @app.route('/')
-def hello():
-    return "Hello World! I am up!"
+def index():
+    return render_template('main.html')
 
-@app.route('/<name>')
-def new_hello(name):
-    return "Hello {}".format(name)
-
-@app.route('/shorten/<long_url>')              
-def shorten_url(long_url):
-    hash_value = hash(long_url)
-    string_length = len(long_url)
-    combined_hash = hash_value ^ (string_length << 16) ^ string_length
-    unique_integer = combined_hash % 238000
-    short_url = decimal_to_base62(unique_integer)
+@app.route('/shorten', methods=['POST'])
+def shorten():
+    long_url = request.form['url']
+    short_url = hash_url(long_url)
     insert_data(long_url, short_url)
-    return short_url
-    
-@app.route('/fetch/<short_url>')
-def fetch(short_url):
-    # lookup short_url from DB and return long_url
-    # pdb.set_trace()
-    return fetch_data(short_url)
-    
+    return jsonify({'result': short_url})
+
+@app.route('/fetch', methods=['POST'])
+def fetch():
+    short_url = request.form['url']
+    long_url = fetch_data(short_url)
+    return jsonify({'result': long_url})
 
 if __name__ == "__main__":
-    app.run()
-
+    app.run(debug=True)
