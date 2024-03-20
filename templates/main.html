@@ -1,1 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Shortener</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    /* Custom styles if needed */ 
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="shorten">Enter URL to Shorten:</label>
+          <input type="text" class="form-control" id="shortenInput">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="callShorten()">Shorten</button>
+      </div>
+    </div>
+
+    <div class="row mt-3">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="fetch">Enter URL to Fetch:</label>
+          <input type="text" class="form-control" id="fetchInput">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="callFetch()">Fetch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <!-- Your JavaScript functions -->
+  <script>
+    async function callShorten() {
+      const urlToShorten = document.getElementById('shortenInput').value;
+      const response = await fetch('/shorten', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `url=${encodeURIComponent(urlToShorten)}`
+      });
+      const data = await response.json();
+      alert(data.result);
+    }
+
+    async function callFetch() {
+      const urlToFetch = document.getElementById('fetchInput').value;
+      const response = await fetch('/fetch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `url=${encodeURIComponent(urlToFetch)}`
+      });
+      const data = await response.json();
+      alert(data.result);
+    }
+  </script>
+</body>
+</html>
 
